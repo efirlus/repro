@@ -8,6 +8,8 @@ import TableRow from '@material-ui/core/TableRow';
 import TableCell from '@material-ui/core/TableCell';
 import { withStyles } from '@material-ui/core/styles';
 import { Paper } from '@material-ui/core';
+import CircularProgress from '@material-ui/core/CircularProgress';
+
 
 const styles = theme => ({
   root: {
@@ -17,37 +19,41 @@ const styles = theme => ({
   },
   table: {
     minWidth: 1080
+  },
+  progress: {
+    margin: theme.spacing.unit * 2  
   }
 });
 
-const customers = [
-  {
-    'id': 1,
-    'image': 'http://gangnamstar.co.kr/files/attach/images/119/324/028/0d19e13c06f3afd4bcb7eb92fb6247b5.jpg',
-    'name': '홍길동',
-    'birthday': '961222',
-    'gender': '남자',
-    'job': '대학생'
-  },
-  {
-    'id': 2,
-    'image': 'http://gangnamstar.co.kr/files/attach/images/119/324/028/9529d54ec28c8be31fa5893e65a62c54.jpg',
-    'name': '나동빈',
-    'birthday': '960508',
-    'gender': '남자',
-    'job': '프로그래머'
-  },
-  {
-    'id': 3,
-    'image': 'http://gangnamstar.co.kr/files/attach/images/119/324/028/46339009bb9c48a95dbbc34db8b4e706.jpg',
-    'name': '이순신',
-    'birthday': '961127',
-    'gender': '남자',
-    'job': '디자이너'
-  }
-]
-
 class App extends Component {
+
+  state = {
+    customers: '',
+    completed: 0
+  }
+  
+  componentDidMount() {
+    this.timer = setInterval(this.progress, 20);
+    this.callApi()
+      .then(res => this.setState({customers: res}))
+      .catch(err => console.log(err));
+  }
+
+  componentWillUnmount() {
+    clearInterval(this.timer);
+  }
+  
+  callApi = async () => {
+    const response = await fetch('/api/customers');
+    const body = await response.json();
+    return body;
+  }
+
+  progress = () => {
+    const { completed } = this.state;
+    this.setState({ completed: completed >= 100 ? 0 : completed + 1 });
+  }
+
   render() {
     const { classes } = this.props;
     return (
@@ -64,9 +70,15 @@ class App extends Component {
             </TableRow>
           </TableHead>
           <TableBody>
-            {customers.map(c => {
+            {this.state.customers ? this.state.customers.map(c => {
               return <Customer key={c.id} id={c.id} image={c.image} name={c.name} birthday={c.birthday} gender={c.gender} job={c.job} />
-            })}
+            }) : 
+            <TableRow>
+              <TableCell colSpan="6" align="center">
+                <CircularProgress className={classes.progress} variant="determinate" value={this.state.completed} />
+              </TableCell>
+            </TableRow>
+            }
           </TableBody>
         </Table>
       </Paper>
