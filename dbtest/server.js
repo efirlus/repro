@@ -1,11 +1,27 @@
 const express = require('express');
-const bodyParser = require('body-parser');
+//const bodyParser = require('body-parser');
 const app = express();
+//const client = require('socket.io').listen(4000).sockets;
+const http = require('http');
+const socketio = require('socket.io');
 const port = process.env.PORT || 5000;
+
 const DB = require('./client/src/dbmaker');
 const recursive = require('./client/node_modules/recursive-readdir');
 const { promisify } = require('util');
 const Recursive_scanP = promisify(recursive);
+
+
+const server = http.createServer(app);
+const io = socketio(server);
+
+
+
+
+//let socket = require('socket.io-client')('http://localhost:5000');
+
+
+
 
 function recursive_scan_and_insert(path_dir) {
     return Recursive_scanP(path_dir).then(files => {
@@ -17,6 +33,8 @@ function recursive_scan_and_insert(path_dir) {
         }));
     });
 };
+
+
 
 app.post('/db', async (req, res) => {
     try {
@@ -35,6 +53,7 @@ app.post('/db', async (req, res) => {
     }
 });
 
+/*
 app.get('/db', (req, res) => {
     DB("GET", "SELECT * FROM filelist").then(function(res2) {
         res.send(res2.row);
@@ -43,5 +62,26 @@ app.get('/db', (req, res) => {
         res.status(500).send("server error");
     });
 });
+*/
 
-app.listen(port, () => console.log('${port}번 포트 열림'));
+io.on('connection', function(socket) {
+    console.log('client connected');
+
+    socket.on('dbrow', data => {
+        DB("GET", "SELECT * FROM filelist").then(function(res) {
+            console.log(res.row);
+            socket.emit('dbrow', res.row);
+        }).catch(err => {
+            console.log(err);
+        });
+
+        socket.broadcast.emit('outgoing', data)
+    });
+
+    socket.on('disconnect', () => console.log('client disconnected'));
+
+
+});
+
+//app.listen(port, () => console.log('${port}번 포트 열림'));
+server.listen(port, () => console.log('${port}번 포트 열림'));

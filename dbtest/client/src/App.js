@@ -1,5 +1,7 @@
 import React, { Component } from 'react';
 import './App.css';
+import socketioclient from 'socket.io-client';
+
 import DBlist from './dblist'
 import DBlistRefresh from './dbrefresh'
 import Table from '@material-ui/core/Table';
@@ -109,22 +111,16 @@ const styles = theme => ({
   }
 });
 
-
 class App extends Component {
-/*
-  state = {
-    filelist: '',
-    completed: 0
-  }
-*/
 
   constructor(props) {
     super(props);
     this.state = {
       filelist: '',
-      completed: 0
+      completed: 0,
+      endpoint: 'http://localhost:5000'
     }
-    this.stateRefresh = this.stateRefresh.bind(this);
+    //this.stateRefresh = this.stateRefresh.bind(this);
     this.handleValueChange = this.handleValueChange.bind(this);
   }
 
@@ -134,6 +130,7 @@ class App extends Component {
     this.setState(nextState);
   }
 
+  /*
   stateRefresh() {
     this.setState({
       filelist: '',
@@ -144,22 +141,20 @@ class App extends Component {
       .then(res => this.setState({filelist: res}))
       .catch(err => console.log(err));
   }
+  */
 
   componentDidMount() {
     this.timer = setInterval(this.progress, 20);
-    this.callDBlist()
-      .then(res => this.setState({filelist: res}))
-      .catch(err => console.log(err));
+    
+    const {endpoint} = this.state;
+    const socket = socketioclient(endpoint);
+    socket.on('outgoing', data => {
+      //const body = data.json();
+      this.setState({filelist: data})})
   };
 
   componentWillUnmount() {
     clearInterval(this.timer);
-  };
-
-  callDBlist = async () => {
-    const result = await fetch('/db');
-    const body = await result.json();
-    return body;
   };
 
   progress = () => {
@@ -170,6 +165,13 @@ class App extends Component {
 
   render() {
     const { classes } = this.props;
+/*
+    const refreshfilelist = (data) => {
+      return data.map((c) => {
+        return <DBlist stateRefresh={this.stateRefresh} key={c.id} id={c.id} path={c.path} addeddate={c.addeddate} isdeleted={c.isdeleted} ismodified={c.ismodified} />
+      });
+    }
+*/
     const cellList = ["번호","경로","날짜","삭제","변형"]
     return (
       <div className={classes.root}>
@@ -206,7 +208,7 @@ class App extends Component {
             <TableBody>
               {this.state.filelist ? this.state.filelist.map(c => {
                 return <DBlist key={c.id} id={c.id} path={c.path} addeddate={c.addeddate} isdeleted={c.isdeleted} ismodified={c.ismodified} />
-              }) : 
+              }): 
               <TableRow>
                 <TableCell colSpan="6" align="center">
                   <CircularProgress className={classes.progress} variant="determinate" value={this.state.completed} />
